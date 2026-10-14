@@ -1,0 +1,15 @@
+# Continuously copies the SQLite database to an S3-compatible bucket (Cloudflare R2, Backblaze B2, ...).
+# Values come from environment variables set in the Render dashboard.
+# Credentials are read from LITESTREAM_ACCESS_KEY_ID and LITESTREAM_SECRET_ACCESS_KEY.
+dbs:
+  - path: ${DATABASE_PATH}
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_BUCKET}
+        path: dealpick
+        endpoint: ${LITESTREAM_ENDPOINT}
+        region: ${LITESTREAM_REGION}
+        force-path-style: true
+        sync-interval: 10s
+        snapshot-interval: 24h
+        retention: 72h
