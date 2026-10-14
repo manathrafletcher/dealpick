@@ -1538,6 +1538,17 @@ def login():
     return ok(ai=ai_available())
 
 
+@app.post("/api/demo-login")
+def demo_login():
+    # One-click demo access. Set DEMO_ONE_CLICK=0 on Render to turn it off and use /api/login again.
+    if os.environ.get("DEMO_ONE_CLICK", "1") == "0":
+        return fail("One-click demo login is turned off.", 403)
+    session.clear()
+    session["auth"] = True
+    session.permanent = True
+    return ok(ai=ai_available())
+
+
 @app.post("/api/logout")
 def logout():
     session.clear()
