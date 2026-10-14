@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E4D57">
+<title>MFA DealPick</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M6 34V20C6 11 12 5 20 5s14 6 14 15v14' fill='none' stroke='%230E4D57' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M20 28c-5-3.4-7.5-6-7.5-9a4.2 4.2 0 0 1 7.5-2.2A4.2 4.2 0 0 1 27.5 19c0 3-2.5 5.6-7.5 9z' fill='%23F4B63F'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style nonce="__NONCE__">
+/* MFA DealPick - care-themed interface.
+   Palette: lagoon teal (trust), sea green (calm), mint (soft ground), marigold (kolam / kasavu gold),
+   petal (gentle attention), berry (alerts only). */
+:root {
+  --lagoon: #0E4D57; --ink: #0B2E35; --sea: #2A8C82; --mint: #D6EFE6; --mint2: #EAF6F1; --mist: #F3F8F6;
+  --gold: #F4B63F; --gold-d: #7A4E00; --petal: #FBE0D9; --berry: #B4325A; --line: #CBE0D9; --muted: #48666C;
+  --display: "Bricolage Grotesque", system-ui, sans-serif; --body: "Figtree", system-ui, sans-serif;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--mist); color: var(--ink); font: 400 16px/1.55 var(--body); min-height: 100vh; overflow-x: hidden; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.12; margin: 0; color: var(--lagoon); letter-spacing: -.01em; }
+h1 { font-size: clamp(30px, 5vw, 50px); font-weight: 700; }
+h2 { font-size: clamp(22px, 3vw, 28px); font-weight: 700; }
+h3 { font-size: 19px; font-weight: 650; }
+p { margin: 0 0 .8em; }
+a { color: var(--lagoon); }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
+
+/* ambient background: three slow, soft lights */
+.aura { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.aura i { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .6; animation: drift 40s ease-in-out infinite alternate; }
+.aura i:nth-child(1) { width: 46vmax; height: 46vmax; background: var(--mint); left: -12vmax; top: -14vmax; }
+.aura i:nth-child(2) { width: 34vmax; height: 34vmax; background: #FCEBC4; right: -10vmax; top: 30vh; animation-duration: 48s; }
+.aura i:nth-child(3) { width: 30vmax; height: 30vmax; background: var(--petal); left: 25vw; bottom: -18vmax; animation-duration: 56s; }
+@keyframes drift { to { transform: translate3d(6vmax, 4vmax, 0) scale(1.12); } }
+#app { position: relative; z-index: 1; }
+
+/* ---------- top bar ---------- */
+.top { display: flex; align-items: center; gap: 18px; padding: 14px clamp(16px, 4vw, 40px); flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 10px; font: 700 22px var(--display); color: var(--lagoon); text-decoration: none; }
+.logo svg { width: 38px; height: 38px; }
+.beat { transform-box: fill-box; transform-origin: center; animation: beat 2.8s ease-in-out infinite; }
+@keyframes beat { 0%, 60%, 100% { transform: scale(1); } 15% { transform: scale(1.22); } 30% { transform: scale(1); } 40% { transform: scale(1.14); } }
+nav.main { display: flex; gap: 4px; margin-left: auto; overflow-x: auto; max-width: 100%; }
+nav.main a { padding: 8px 15px; border-radius: 999px; color: var(--lagoon); text-decoration: none; font-weight: 600; white-space: nowrap; transition: background .25s, color .25s; }
+nav.main a:hover { background: var(--mint); }
+nav.main a[aria-current="page"] { background: var(--lagoon); color: #fff; }
+.who { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+.who b { color: var(--ink); font-weight: 600; }
+.who button { background: none; border: 0; color: var(--lagoon); font: 600 14px var(--body); cursor: pointer; text-decoration: underline; padding: 4px; }
+main { max-width: 1080px; margin: 0 auto; padding: 8px clamp(16px, 4vw, 40px) 90px; }
+main > .enter { animation: rise .5s var(--ease) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- buttons, fields ---------- */
+.btn { font: 600 15px var(--body); border: 0; border-radius: 12px; padding: 11px 18px; cursor: pointer; background: var(--lagoon); color: #fff; display: inline-flex; gap: 8px; align-items: center; justify-content: center; text-decoration: none; transition: transform .2s var(--ease), box-shadow .2s, background .2s; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px -10px rgba(14, 77, 87, .6); }
+.btn:active { transform: translateY(0); }
+.btn.gold { background: var(--gold); color: var(--ink); }
+.btn.soft { background: var(--mint); color: var(--lagoon); }
+.btn.line { background: transparent; color: var(--lagoon); box-shadow: inset 0 0 0 2px var(--lagoon); }
+.btn.alert { background: var(--berry); }
+.btn.small { padding: 7px 12px; font-size: 14px; border-radius: 10px; }
+.btn[disabled] { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.row.end { justify-content: flex-end; }
+.spacer { flex: 1; }
+label.f { display: grid; gap: 5px; font-weight: 600; font-size: 14px; color: var(--lagoon); align-content: start; }
+input, select, textarea { font: 400 16px var(--body); color: var(--ink); background: #fff; border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; transition: border-color .2s, box-shadow .2s; }
+input:focus, select:focus, textarea:focus { border-color: var(--sea); box-shadow: 0 0 0 4px rgba(42, 140, 130, .17); outline: none; }
+textarea { resize: vertical; min-height: 84px; }
+.hint { font-weight: 400; color: var(--muted); font-size: 13px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.span2 { grid-column: 1 / -1; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+
+/* ---------- surfaces (deliberately different shapes) ---------- */
+.sheet { background: #fff; border-radius: 24px; padding: clamp(18px, 3vw, 30px); box-shadow: 0 1px 0 var(--line), 0 28px 44px -34px rgba(14, 77, 87, .45); }
+.sheet.tight { border-radius: 16px; padding: 18px 20px; }
+.sheet.mint { background: var(--mint2); box-shadow: none; }
+.sheet.petal { background: var(--petal); box-shadow: none; }
+.sheet + .sheet, .stack > * + * { margin-top: 18px; }
+.page-head { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin: 18px 0 22px; }
+
+/* ---------- chips ---------- */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--mint); color: var(--lagoon); white-space: nowrap; }
+.chip.gold { background: #FCE7B2; color: var(--gold-d); }
+.chip.sea { background: var(--sea); color: #fff; }
+.chip.petal { background: var(--petal); color: var(--berry); }
+.chip.line { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); color: var(--muted); }
+
+/* ---------- sign-in ---------- */
+.auth { min-height: 100vh; display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(24px, 5vw, 70px); align-items: center; max-width: 1200px; margin: 0 auto; padding: clamp(20px, 5vw, 60px); }
+.auth .lead { font-size: 18px; color: var(--muted); max-width: 30em; margin-top: 16px; }
+.hero-art { width: min(100%, 470px); display: block; margin: 26px 0 0; overflow: visible; }
+.draw { fill: none; stroke: var(--lagoon); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 2.2s var(--ease) forwards; }
+.draw.glass { stroke-width: 2.2; animation-delay: .8s; }
+.draw.wheel { animation-delay: 1.1s; }
+.draw.arch { stroke: var(--sea); stroke-width: 4.5; animation-duration: 2.6s; animation-delay: 1.5s; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.car-bob { animation: bob 3.6s ease-in-out 4s infinite; }
+@keyframes bob { 50% { transform: translateY(-3px); } }
+.pulli circle { fill: var(--gold); opacity: 0; animation: pop .6s var(--ease) forwards, glow 3.4s ease-in-out 5s infinite; }
+@keyframes pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: none; } }
+@keyframes glow { 50% { opacity: .45; } }
+.pulli circle { transform-box: fill-box; transform-origin: center; }
+.heart-top { fill: var(--gold); opacity: 0; transform-box: fill-box; transform-origin: center; animation: pop .7s var(--ease) 3.2s forwards, beat 2.8s ease-in-out 4s infinite; }
+.auth-card { border-radius: 28px 28px 28px 8px; }
+.tabs { display: flex; gap: 4px; background: var(--mint2); padding: 4px; border-radius: 14px; margin-bottom: 20px; }
+.tabs button { flex: 1; border: 0; background: none; padding: 9px 8px; border-radius: 10px; font: 600 14px var(--body); color: var(--lagoon); cursor: pointer; transition: background .25s, box-shadow .25s; }
+.tabs button[aria-selected="true"] { background: #fff; box-shadow: 0 2px 8px -2px rgba(14, 77, 87, .3); }
+.error { background: var(--petal); color: var(--berry); border-radius: 10px; padding: 10px 14px; font-weight: 600; font-size: 14px; animation: rise .3s var(--ease); }
+
+/* ---------- deals and the road ---------- */
+.care-line { font: 500 clamp(19px, 2.6vw, 24px)/1.4 var(--display); color: var(--ink); max-width: 40em; }
+.care-line a { color: var(--lagoon); font-weight: 700; text-decoration-color: var(--gold); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+.deal { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(230px, 1fr) auto; gap: 20px; align-items: center; padding: 18px 6px; border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; transition: background .25s; border-radius: 12px; }
+.deal:hover { background: var(--mint2); }
+.deal:last-child { border-bottom: 0; }
+.vtitle { font: 650 19px var(--display); color: var(--lagoon); }
+.deal .meta { color: var(--muted); font-size: 14px; }
+.deal .money { text-align: right; font: 650 18px var(--display); }
+.deal .money small { display: block; font: 400 13px var(--body); color: var(--muted); }
+.road { --i: 0; position: relative; height: 46px; min-width: 220px; }
+.road::before { content: ""; position: absolute; left: 12px; right: 12px; top: 30px; border-top: 3px dashed var(--line); }
+.road .fill { position: absolute; left: 12px; top: 29px; height: 5px; border-radius: 3px; background: var(--sea); width: calc((100% - 24px) * var(--i) / 3); transition: width 1.7s var(--ease) .15s; }
+.road .stop { position: absolute; top: 25px; left: calc(12px + (100% - 24px) * var(--n) / 3); width: 15px; height: 15px; margin-left: -7px; border-radius: 50%; background: #fff; border: 3px solid var(--line); padding: 0; transition: background .5s, border-color .5s; }
+.road .stop.on { border-color: var(--sea); background: var(--sea); }
+.road button.stop { cursor: pointer; }
+.road .car { position: absolute; top: 0; left: calc(12px + (100% - 24px) * var(--i) / 3); width: 40px; margin-left: -20px; transition: left 1.7s var(--ease) .15s; pointer-events: none; }
+.road .labels { position: absolute; left: 0; right: 0; top: 46px; height: 0; }
+.road.big { height: 74px; margin: 6px 0 4px; }
+.road.big::before { top: 38px; border-top-width: 4px; }
+.road.big .fill { top: 37px; height: 6px; }
+.road.big .stop { top: 31px; width: 19px; height: 19px; margin-left: -9px; }
+.road.big .car { width: 56px; margin-left: -28px; }
+.road-labels { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 13px; color: var(--muted); text-align: center; }
+.road-labels span.on { color: var(--lagoon); font-weight: 700; }
+.empty { text-align: center; padding: 40px 10px; }
+.empty svg { width: 150px; margin: 0 auto 10px; display: block; }
+
+/* ---------- forms: wizard ---------- */
+.steps { display: flex; margin: 0 0 24px; }
+.step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; font-size: 14px; font-weight: 600; color: var(--muted); }
+.step::before { content: ""; position: absolute; top: 15px; left: -50%; width: 100%; height: 3px; background: var(--line); z-index: 0; }
+.step:first-child::before { display: none; }
+.step::after { content: ""; position: absolute; top: 15px; left: -50%; width: 0; height: 3px; background: var(--sea); z-index: 0; transition: width .6s var(--ease); }
+.step:first-child::after { display: none; }
+.step.done::after, .step.now::after { width: 100%; }
+.step i { font: 700 15px var(--display); font-style: normal; width: 33px; height: 33px; border-radius: 50%; background: #fff; border: 3px solid var(--line); display: grid; place-items: center; position: relative; z-index: 1; transition: all .4s var(--ease); }
+.step.now i { border-color: var(--sea); color: var(--lagoon); transform: scale(1.12); }
+.step.done i { background: var(--sea); border-color: var(--sea); color: #fff; }
+.step.now, .step.done { color: var(--lagoon); }
+.panel-in { animation: rise .45s var(--ease) both; }
+
+/* ---------- notes / checklist ---------- */
+.note { display: grid; grid-template-columns: 18px 1fr; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--mint); }
+.note:last-child { border-bottom: 0; }
+.note .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 7px; background: var(--sea); }
+.note.warn .dot { background: var(--gold); }
+.note.alert .dot { background: var(--berry); animation: ping 2.2s ease-out infinite; }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(180, 50, 90, .45); } 80%, 100% { box-shadow: 0 0 0 10px rgba(180, 50, 90, 0); } }
+.note.alert { font-weight: 600; }
+.list-row { display: flex; gap: 12px; align-items: center; padding: 13px 4px; border-bottom: 1px solid var(--mint); text-decoration: none; color: inherit; flex-wrap: wrap; border-radius: 10px; transition: background .2s; }
+.list-row:hover { background: var(--mint2); }
+.list-row:last-child { border-bottom: 0; }
+.list-row .grow { flex: 1; min-width: 200px; }
+.list-row b { font-family: var(--display); font-weight: 650; color: var(--lagoon); font-size: 17px; }
+
+/* ---------- notice page ---------- */
+.cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(250px, 1fr); gap: 22px; align-items: start; }
+.status { display: flex; gap: 16px; align-items: center; border-radius: 20px; padding: 16px 20px; margin-bottom: 18px; background: var(--mint2); animation: rise .5s var(--ease) both; }
+.status h3 { font-size: 18px; }
+.status p { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+.status.draft { background: #FDF0CF; }
+.status.changes { background: var(--petal); }
+.status.review { background: var(--mint); }
+.status .pulse { width: 16px; height: 16px; border-radius: 50%; background: var(--sea); flex: none; animation: ping2 2s ease-out infinite; }
+@keyframes ping2 { 0% { box-shadow: 0 0 0 0 rgba(42, 140, 130, .5); } 80%, 100% { box-shadow: 0 0 0 14px rgba(42, 140, 130, 0); } }
+.status .pencil { width: 16px; height: 16px; border-radius: 4px; background: var(--gold); flex: none; transform: rotate(45deg); }
+.status .flag { width: 16px; height: 16px; border-radius: 50%; background: var(--berry); flex: none; }
+.editor { width: 100%; min-height: 520px; font: 400 16px/1.7 "Times New Roman", Georgia, serif; padding: 22px 26px; border-radius: 14px; }
+.editor[readonly] { background: #FAFCFB; color: #213E44; }
+.paper { background: #fff; border-radius: 14px; border: 1.5px solid var(--line); padding: clamp(18px, 4vw, 44px); font: 400 16px/1.7 "Times New Roman", Georgia, serif; color: #14262A; max-height: 70vh; overflow: auto; }
+.paper p { margin: .55em 0; text-align: justify; }
+.paper .t1 { text-align: center; font-weight: 700; font-size: 21px; margin: 0 0 16px; }
+.paper .t2 { text-align: center; font-weight: 700; font-size: 17px; margin: 14px 0 8px; }
+.paper .t3 { font-weight: 700; margin-top: 1.1em; }
+.paper .r { text-align: right; margin: .1em 0; }
+.paper .num { padding-left: 2em; text-indent: -2em; }
+.paper .sub { padding-left: 3em; text-indent: -2em; }
+.paper table { border-collapse: collapse; width: 100%; margin: .6em 0; font-size: 15px; }
+.paper table.box td { border: 1px solid #9DB8B1; padding: 5px 9px; }
+.paper table.free td { padding: 5px 9px; vertical-align: top; width: 50%; }
+.paper hr.pb { border: 0; border-top: 2px dashed var(--line); margin: 28px 0; }
+.dim { opacity: .6; }
+.tl { list-style: none; margin: 0; padding: 0 0 0 18px; border-left: 3px solid var(--mint); }
+.tl li { position: relative; padding: 0 0 16px 14px; font-size: 14px; }
+.tl li::before { content: ""; position: absolute; left: -26px; top: 5px; width: 13px; height: 13px; border-radius: 50%; background: var(--sea); border: 3px solid #fff; }
+.tl li.approved::before { background: var(--gold); }
+.tl li.changes_requested::before { background: var(--berry); }
+.tl b { color: var(--lagoon); }
+.tl .when { color: var(--muted); font-size: 13px; }
+dl.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 14px; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; font-weight: 600; word-break: break-word; }
+
+/* the advocate's seal, stamped on approval */
+.seal { width: 150px; height: 150px; flex: none; transform: rotate(-8deg); }
+.seal.stamp { animation: stamp .8s var(--ease) both; }
+@keyframes stamp { 0% { opacity: 0; transform: scale(2.6) rotate(-24deg); } 55% { opacity: 1; transform: scale(.92) rotate(-6deg); } 75% { transform: scale(1.04) rotate(-9deg); } 100% { opacity: 1; transform: scale(1) rotate(-8deg); } }
+.approved-box { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; background: linear-gradient(120deg, var(--mint2), #FFF7DF); border-radius: 22px; padding: 18px 22px; margin-bottom: 18px; }
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--mint); border-top-color: var(--sea); animation: spin .8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- modal, toast ---------- */
+.modal-back { position: fixed; inset: 0; background: rgba(11, 46, 53, .5); display: grid; place-items: center; z-index: 50; animation: fade .2s; padding: 12px; }
+.modal { background: #fff; border-radius: 24px; max-width: 720px; width: 100%; max-height: 92vh; overflow: auto; padding: clamp(18px, 3vw, 28px); animation: rise .35s var(--ease); }
+.modal.wide { max-width: 860px; }
+.pick { display: block; width: 100%; text-align: left; background: var(--mint2); border: 0; border-radius: 14px; padding: 14px 16px; cursor: pointer; font: inherit; color: inherit; transition: background .2s, transform .2s var(--ease); }
+.pick + .pick { margin-top: 8px; }
+.pick:hover { background: var(--mint); transform: translateX(4px); }
+.pick b { font: 650 17px var(--display); color: var(--lagoon); display: block; }
+#toasts { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 60; width: min(92vw, 460px); }
+.toast { background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 14px; font-weight: 600; animation: rise .3s var(--ease); box-shadow: 0 14px 30px -12px rgba(0, 0, 0, .5); }
+.toast.bad { background: var(--berry); }
+
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; padding-top: 28px; }
+  .cols { grid-template-columns: 1fr; }
+  .deal { grid-template-columns: 1fr; gap: 10px; }
+  .deal .money { text-align: left; }
+  .road { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; transition-delay: 0s !important; }
+  .draw { stroke-dashoffset: 0; }
+  .pulli circle, .heart-top { opacity: 1; }
+}
+
+/* ---------- additions for the one-time flow ---------- */
+.grid.metrics { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 16px 0; }
+.sheet + .grid, .grid + .sheet { margin-top: 18px; }
+.who { gap: 16px; }
+.tabs { flex-wrap: wrap; }
+.tabs button { flex: 1 1 auto; }
+.stack { display: grid; gap: 14px; }
+.enter { animation: rise .5s var(--ease) both; }
+</style>
+</head>
+<body>
+<div class="aura" aria-hidden="true"><i></i><i></i><i></i></div>
+<div id="app"></div>
+<div id="toasts" role="status" aria-live="polite"></div>
+<noscript><p class="muted" role="alert">MFA DealPick needs JavaScript. Turn it on in your browser and reload.</p></noscript>
+<script nonce="__NONCE__">
+/* MFA DealPick - one-time-use interface (no framework, nothing stored). All user text is inserted with
+   textContent via h(); the only innerHTML use is for fixed, built-in SVG artwork. */
+(function () {
+  "use strict";
+
+  const app = document.getElementById("app");
+  const STAGES = ["Deal details", "AI review", "Questions", "Documents"];
+
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    Object.keys(attrs || {}).forEach((k) => {
+      const v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), v);
+      else if (k === "style") Object.keys(v).forEach((s) => (s.indexOf("--") === 0 ? el.style.setProperty(s, v[s]) : (el.style[s] = v[s])));
+      else if (k === "value") el.value = v;
+      else el.setAttribute(k, v === true ? "" : v);
+    });
+    (function add(list) {
+      list.forEach((c) => {
+        if (c === null || c === undefined || c === false) return;
+        if (Array.isArray(c)) return add(c);
+        el.append(c.nodeType ? c : document.createTextNode(String(c)));
+      });
+    })(kids);
+    return el;
+  }
+
+  function svgFrom(markup) {
+    const t = document.createElement("template");
+    t.innerHTML = markup.trim();
+    return t.content.firstChild;
+  }
+
+
+  function toast(msg, bad) {
+    const t = h("div", { class: "toast" + (bad ? " bad" : "") }, msg);
+    document.getElementById("toasts").append(t);
+    setTimeout(() => t.remove(), bad ? 6500 : 3800);
+  }
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const inr = (n) => Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const asDate = (s) => new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + "T00:00:00" : s);
+  const fmtDate = (s) => (s ? asDate(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "");
+  const fmtDT = (s) => (s ? new Date(s).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "");
+  const plural = (n, one, many) => n + " " + (n === 1 ? one : many || one + "s");
+  const first = (s) => String(s || "").trim().split(/\s+/)[0] || "there";
+
+
+  /* ---------------------------------------------------------------- artwork (fixed markup only) */
+
+  const logo = () => svgFrom(`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 34V20C6 11 12 5 20 5s14 6 14 15v14" fill="none" stroke="#0E4D57" stroke-width="3.2" stroke-linecap="round"/><path class="beat" d="M20 28c-5-3.4-7.5-6-7.5-9a4.2 4.2 0 0 1 7.5-2.2A4.2 4.2 0 0 1 27.5 19c0 3-2.5 5.6-7.5 9z" fill="#F4B63F"/></svg>`);
+
+  const carIcon = () => svgFrom(`<svg class="car" viewBox="0 0 64 30" aria-hidden="true"><path d="M3 24V17q0-4 5-5l11-2 8-7q2-2 5-2h15q3 0 5 3l7 6 6 2q3 1 3 5v7z" fill="#0E4D57"/><path d="M24 9l-5 6h12V9zm11 0v6h16l-5-6z" fill="#D6EFE6"/><circle cx="17" cy="24" r="5" fill="#0B2E35"/><circle cx="17" cy="24" r="2" fill="#F4B63F"/><circle cx="49" cy="24" r="5" fill="#0B2E35"/><circle cx="49" cy="24" r="2" fill="#F4B63F"/></svg>`);
+
+  function heroArt() {
+    const dots = [40, 75, 110, 145, 180, 215, 250, 285, 320].map((x, i) => `<circle cx="${x}" cy="219" r="4.5" style="animation-delay:${3.4 + i * 0.12}s,${5 + i * 0.3}s"/>`).join("");
+    return svgFrom(`<svg class="hero-art" viewBox="0 0 360 232" role="img" aria-label="A car sheltered under a protective arch">
+      <path class="draw arch" pathLength="1" d="M22 200C22 52 100 14 180 14s158 38 158 186"/>
+      <path class="heart-top" d="M180 40c-9-6-14-11-14-17a7.6 7.6 0 0 1 14-4 7.6 7.6 0 0 1 14 4c0 6-5 11-14 17z"/>
+      <path class="draw" pathLength="1" d="M30 199H330"/>
+      <g class="car-bob"><g transform="translate(40 80)">
+        <path class="draw" pathLength="1" d="M8 100V82Q8 70 22 68L66 60L96 30Q101 25 109 25H188Q197 25 203 31L232 60L262 66Q274 69 274 82V100Z"/>
+        <path class="draw glass" pathLength="1" d="M103 33L78 58H142V33ZM152 33V58H222L196 33Z"/>
+        <path class="draw glass" pathLength="1" d="M147 60V96"/>
+        <circle cx="266" cy="80" r="4" fill="#F4B63F"/><circle cx="15" cy="82" r="3.5" fill="#B4325A"/>
+        <circle class="draw wheel" pathLength="1" cx="62" cy="100" r="17" fill="none"/><circle cx="62" cy="100" r="7" fill="#F4B63F"/>
+        <circle class="draw wheel" pathLength="1" cx="222" cy="100" r="17" fill="none"/><circle cx="222" cy="100" r="7" fill="#F4B63F"/>
+      </g></g>
+      <g class="pulli">${dots}</g></svg>`);
+  }
+
+
+  function road(stage, opts) {
+    opts = opts || {};
+    const el = h("div", { class: "road" + (opts.big ? " big" : ""), style: { "--i": 0 } }, h("div", { class: "fill" }));
+    STAGES.forEach((s, n) => {
+      const on = n <= stage ? " on" : "";
+      el.append(opts.onPick
+        ? h("button", { type: "button", class: "stop" + on, style: { "--n": n }, title: s, "aria-label": "Mark as " + s, onclick: () => opts.onPick(n) })
+        : h("span", { class: "stop" + on, style: { "--n": n } }));
+    });
+    el.append(carIcon());
+    setTimeout(() => el.style.setProperty("--i", stage), 80);          // the car drives to its stage
+    return el;
+  }
+
+
+  function inline(text) {
+    return text.split(/(\*\*[^*]+\*\*)/).filter(Boolean).map((p) => (/^\*\*[^*]+\*\*$/.test(p) ? h("strong", null, p.slice(2, -2)) : p.replace(/\*\*/g, "")));
+  }
+
+  function renderDoc(text) {
+    const root = h("div", { class: "paper" });
+    const lines = String(text || "").split("\n");
+    let i = 0;
+    while (i < lines.length) {
+      const s = lines[i].trim();
+      i++;
+      if (!s) continue;
+      if (s === "~~") { root.append(h("hr", { class: "pb" })); continue; }
+      if (s.startsWith("|")) {
+        const bordered = !s.startsWith("|~"), rows = [];
+        i--;
+        while (i < lines.length && lines[i].trim().startsWith("|")) {
+          let c = lines[i].trim();
+          c = c.startsWith("|~") ? c.slice(2) : c.slice(1);
+          rows.push(c.split("|").map((x) => x.trim().replace(/^~/, "")));
+          i++;
+        }
+        root.append(h("table", { class: bordered ? "box" : "free" }, h("tbody", null, rows.map((r) => h("tr", null, r.map((c) => h("td", null, inline(c))))))));
+        continue;
+      }
+      let m;
+      if (s.startsWith("### ")) root.append(h("p", { class: "t3" }, inline(s.slice(4))));
+      else if (s.startsWith("## ")) root.append(h("p", { class: "t2" }, inline(s.slice(3))));
+      else if (s.startsWith("# ")) root.append(h("p", { class: "t1" }, inline(s.slice(2))));
+      else if (s.startsWith(">>")) root.append(h("p", { class: "r" }, s.slice(2).trim() ? inline(s.slice(2).trim()) : "\u00a0"));
+      else if ((m = s.match(/^(\d{1,3})[.)]\s+(.*)$/))) root.append(h("p", { class: "num" }, m[1] + ".\u00a0\u00a0", inline(m[2])));
+      else if (/^\(([a-zA-Z]{1,3}|\d{1,2})\)\s/.test(s)) root.append(h("p", { class: "sub" }, inline(s)));
+      else root.append(h("p", null, inline(s)));
+    }
+    return root;
+  }
+
+
+  const YN = [["no", "No"], ["yes", "Yes"]];
+  const MODES = ["UPI", "Bank transfer", "Cheque", "Demand draft", "Cash"];
+  const ST3 = [["TN", "Tamil Nadu"], ["KL", "Kerala"], ["OT", "Another state"]];
+  const DEAL_STEPS = [
+    { name: "Buyer", fields: [
+      { k: "buyer_name", l: "Buyer's full name", req: 1, ac: "off" },
+      { k: "buyer_rel", l: "Relation", t: "select", o: ["S/o", "D/o", "W/o", "C/o"] },
+      { k: "buyer_rel_name", l: "Father's, mother's or spouse's name" },
+      { k: "buyer_age", l: "Age", t: "number" },
+      { k: "buyer_address", l: "Address", t: "textarea", span: 1, req: 1 },
+      { k: "buyer_city", l: "City or town" },
+      { k: "buyer_state", l: "Buyer lives in", t: "select", o: ST3 },
+      { k: "buyer_phone", l: "Mobile number" },
+      { k: "buyer_email", l: "Email", t: "email" },
+      { k: "buyer_id_type", l: "ID shown", t: "select", o: ["Aadhaar", "Driving licence", "Voter ID", "Passport"] },
+      { k: "buyer_id_no", l: "ID number", hint: "For Aadhaar, only the last 4 digits are kept." }] },
+    { name: "Car", fields: [
+      { k: "make", l: "Make", req: 1 }, { k: "model", l: "Model", req: 1 }, { k: "variant", l: "Variant" },
+      { k: "year", l: "Year of manufacture", t: "number" },
+      { k: "reg_no", l: "Registration number", req: 1 },
+      { k: "reg_state", l: "Registered in", t: "select", o: ST3 },
+      { k: "chassis", l: "Chassis number" }, { k: "engine_no", l: "Engine number" }, { k: "colour", l: "Colour" },
+      { k: "fuel", l: "Fuel", t: "select", o: ["Petrol", "Diesel", "CNG", "Electric", "Hybrid"] },
+      { k: "odometer", l: "Odometer (km)", t: "number" },
+      { k: "owners", l: "Owner number", t: "select", o: [["1", "First owner"], ["2", "Second owner"], ["3", "Third owner"], ["4+", "Fourth or later"]] },
+      { k: "rc_holder", l: "RC is in the name of", hint: "Leave blank if it's your dealership." },
+      { k: "hypothecated", l: "Loan on the RC?", t: "select", o: YN },
+      { k: "financier", l: "Lender on the RC", when: ["hypothecated", "yes"] },
+      { k: "insurance_policy", l: "Insurance policy" }, { k: "insurance_valid", l: "Insurance valid until", t: "date" },
+      { k: "accident_history", l: "Accident history", t: "select", o: [["none", "No major accident known"], ["minor", "Minor cosmetic repairs"], ["major", "Major repair after an accident"]] },
+      { k: "known_defects", l: "Known defects you're telling the buyer about", t: "textarea", span: 1 }] },
+    { name: "Money", fields: [
+      { k: "price", l: "Sale price (Rs.)", t: "number", req: 1 },
+      { k: "advance", l: "Advance received (Rs.)", t: "number" },
+      { k: "advance_date", l: "Advance received on", t: "date" }, { k: "advance_mode", l: "Advance paid by", t: "select", o: MODES },
+      { k: "balance_due_date", l: "Balance due on", t: "date" }, { k: "balance_mode", l: "Balance to be paid by", t: "select", o: MODES },
+      { k: "finance_by_buyer", l: "Is the buyer taking a loan?", t: "select", o: YN },
+      { k: "buyer_financier", l: "Buyer's lender", when: ["finance_by_buyer", "yes"] },
+      { k: "delivery_date", l: "Delivery date", t: "date" },
+      { k: "warranty_days", l: "Warranty (days, 0 for none)", t: "number" }, { k: "warranty_km", l: "Warranty (km)", t: "number" },
+      { k: "warranty_scope", l: "Warranty covers" }] },
+    { name: "Terms", fields: [
+      { k: "deal_state", l: "This deal is made in", t: "select", o: [["TN", "Tamil Nadu"], ["KL", "Kerala"]], hint: "Decides the state clauses in the agreement." },
+      { k: "place", l: "Place of signing" }, { k: "jurisdiction_city", l: "Courts at" },
+      { k: "agreement_date", l: "Agreement date", t: "date" },
+      { k: "transfer_cost_bearer", l: "Who pays the transfer fees?", t: "select", o: ["Buyer", "Seller"] },
+      { k: "interest_rate", l: "Late payment interest (% a year)", t: "number" },
+      { k: "forfeit_pct", l: "If the buyer backs out, keep up to (% of price)", t: "number", hint: "Courts allow only a reasonable amount." },
+      { k: "arbitration", l: "Disputes go to", t: "select", o: [["", "Courts only"], ["1", "Arbitration first"]] },
+      { k: "stamp_value", l: "Stamp paper value (Rs.)", t: "number", hint: "Your advocate can confirm this." },
+      { k: "witness1", l: "Witness 1 (optional)" }, { k: "witness2", l: "Witness 2 (optional)" },
+      { k: "extra_clauses", l: "Extra terms, one per line", t: "textarea", span: 1 }] },
+  ];
+
+
+  function field(f, val) {
+    const t = f.t || "text";
+    let input;
+    if (t === "select") {
+      input = h("select", { name: f.k }, (f.o || []).map((o) => { const a = Array.isArray(o) ? o : [o, o]; return h("option", { value: a[0] }, a[1]); }));
+    } else if (t === "textarea") {
+      input = h("textarea", { name: f.k, rows: f.rows || 3 });
+    } else {
+      input = h("input", { name: f.k, type: t === "number" ? "text" : t, inputmode: t === "number" ? "decimal" : null, autocomplete: f.ac || "off" });
+    }
+    input.value = val !== undefined && val !== null && val !== "" ? val : (f.d !== undefined ? f.d : "");
+    if (t === "select" && input.selectedIndex < 0 && input.options.length) input.selectedIndex = 0;
+    return h("label", { class: "f" + (f.span ? " span2" : ""), "data-k": f.k }, f.l, input, f.hint ? h("span", { class: "hint" }, f.hint) : null);
+  }
+
+  function collect(root) {
+    const o = {};
+    root.querySelectorAll("[name]").forEach((el) => { o[el.name] = el.value; });
+    return o;
+  }
+
+
+  /* ================================================================ one-time-use flow ================================================================
+     login -> deal details (wizard) -> AI review -> questions + notice choice -> documents + one Word download.
+     Nothing is saved: the deal lives in this page's memory and is gone when the tab closes. */
+
+  const DEFAULTS = {
+    deal_state: "TN", buyer_state: "TN", reg_state: "TN", interest_rate: "12", forfeit_pct: "10", warranty_days: "0",
+    warranty_scope: "engine and gearbox", transfer_cost_bearer: "Buyer", advance_mode: "UPI", balance_mode: "Bank transfer",
+    hypothecated: "no", finance_by_buyer: "no", accident_history: "none", owners: "1", buyer_rel: "S/o", state: "TN",
+  };
+  const PROFILE_KEYS = ["dealership_name", "signatory", "address", "city", "state", "gstin", "trade_cert", "phone"];
+  const PROFILE_STEP = { name: "Dealership", fields: [
+    { k: "dealership_name", l: "Dealership name", req: 1 }, { k: "signatory", l: "Authorised signatory", hint: "Signs for the dealership. Defaults to \"authorised signatory\"." },
+    { k: "address", l: "Dealership address", t: "textarea", span: 1, req: 1, rows: 2 }, { k: "city", l: "City or town", req: 1 },
+    { k: "state", l: "State", t: "select", o: [["TN", "Tamil Nadu"], ["KL", "Kerala"]] },
+    { k: "phone", l: "Phone" }, { k: "gstin", l: "GSTIN (optional)" }, { k: "trade_cert", l: "Trade certificate no. (optional)" }] };
+  const WIZ = [PROFILE_STEP].concat(DEAL_STEPS);
+
+  const SAMPLE = {
+    dealership_name: "Sri Murugan Pre-Owned Cars", signatory: "R. Murugan", address: "No. 14, GST Road, Guindy", city: "Chennai", state: "TN",
+    phone: "9840012345", gstin: "33ABCDE1234F1Z5", trade_cert: "TC/CHN/2024/0456",
+    buyer_name: "Anil Kumar", buyer_rel: "S/o", buyer_rel_name: "Suresh Kumar", buyer_age: "34", buyer_address: "12, Lake View Road, Ernakulam",
+    buyer_city: "Kochi", buyer_state: "KL", buyer_phone: "9447012345", buyer_id_type: "Aadhaar", buyer_id_no: "123412341234",
+    make: "Maruti Suzuki", model: "Swift", variant: "VXi", year: "2018", reg_no: "TN 09 AB 1234", reg_state: "TN", colour: "White", fuel: "Petrol",
+    odometer: "54200", owners: "1", hypothecated: "yes", financier: "HDFC Bank", insurance_valid: "2027-03-31", accident_history: "minor",
+    price: "520000", advance: "30000", advance_mode: "UPI", balance_mode: "Bank transfer", warranty_days: "90", warranty_km: "3000",
+    deal_state: "TN", place: "Chennai", jurisdiction_city: "Chennai",
+  };
+
+  const S = { authed: false, values: null, step: 0, seeded: false, review: null, qs: null, docs: [], ref: "", cur: 0, editing: false };
+  const fresh = () => Object.assign({}, DEFAULTS, { agreement_date: today() });
+  S.values = fresh();
+
+  const main = () => document.getElementById("main");
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  async function busy(btn, label, fn) {
+    const old = btn.textContent;
+    btn.disabled = true;
+    btn.replaceChildren(h("span", { class: "spinner" }), "  " + label);
+    try { return await fn(); }
+    catch (e) { toast(e.message, true); }
+    finally { btn.disabled = false; btn.textContent = old; }
+  }
+
+  async function api(path, method, body) {
+    const opt = { method: method || "GET", headers: { "X-Requested-With": "DealPick" }, credentials: "same-origin" };
+    if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+    let res;
+    try { res = await fetch("/api" + path, opt); }
+    catch (e) { throw new Error("Can't reach the server. Check your connection and try again."); }
+    let data = null;
+    try { data = await res.json(); } catch (e) { /* non-JSON error page */ }
+    if (res.status === 401 && S.authed) { S.authed = false; renderLogin(); throw new Error("Please log in again."); }
+    if (!res.ok || !data || data.success === false) throw new Error((data && data.message) || "Something went wrong. Try again.");
+    return data;
+  }
+
+  /* ---------------------------------------------------------------- login */
+
+  function renderLogin() {
+    document.title = "MFA DealPick";
+    const err = h("div", { class: "error", role: "alert", hidden: true });
+    async function submit(e) {
+      e.preventDefault();
+      err.hidden = true;
+      const btn = form.querySelector("button[type=submit]");
+      btn.disabled = true;
+      try {
+        await api("/login", "POST", collect(form));
+        S.authed = true;
+        startApp();
+      } catch (ex) { err.textContent = ex.message; err.hidden = false; btn.disabled = false; }
+    }
+    const form = h("form", { onsubmit: submit, novalidate: true },
+      h("div", { class: "stack" }, field({ k: "username", l: "Username", ac: "username" }), field({ k: "password", l: "Password", t: "password", ac: "current-password" })),
+      err, h("div", { class: "row", style: { marginTop: "18px" } }, h("button", { class: "btn gold", type: "submit" }, "Log in")));
+    app.replaceChildren(h("div", { class: "auth" },
+      h("div", null,
+        h("span", { class: "logo", style: { marginBottom: "26px" } }, logo(), "MFA DealPick"),
+        h("h1", null, "Every deal, looked after."),
+        h("p", { class: "lead" }, "Record a used-car sale, get an honest review of the deal, and download an agreement and legal notices written for Tamil Nadu or Kerala."),
+        heroArt()),
+      h("div", { class: "sheet auth-card" }, h("h2", { style: { marginBottom: "16px" } }, "Dealer log in"), form,
+        h("p", { class: "muted small", style: { marginTop: "16px", marginBottom: 0 } }, "A prototype: nothing you enter is saved on the server."))));
+  }
+
+  /* ---------------------------------------------------------------- shell and progress */
+
+  const STAGE_NAMES = ["Deal details", "AI review", "Questions", "Documents"];
+
+  function shell() {
+    app.replaceChildren(
+      h("header", { class: "top" },
+        h("span", { class: "logo" }, logo(), "MFA DealPick"),
+        h("span", { class: "spacer" }),
+        h("div", { class: "who" }, h("button", { type: "button", onclick: startOver }, "Start a new deal"), h("button", { type: "button", onclick: logout }, "Log out"))),
+      h("main", { id: "main" }));
+  }
+
+  function progress(stage) {
+    return h("div", { class: "sheet tight", style: { marginBottom: "18px" } }, road(stage, { big: true }),
+      h("div", { class: "road-labels" }, STAGE_NAMES.map((n, i) => h("span", { class: i <= stage ? "on" : "" }, n))));
+  }
+
+  function show(stage, ...nodes) {
+    const m = main();
+    m.replaceChildren(h("div", { class: "enter" }, progress(stage), ...nodes));
+    window.scrollTo(0, 0);
+  }
+
+  async function logout() {
+    try { await api("/logout", "POST", {}); } catch (e) { /* already logged out */ }
+    S.authed = false;
+    S.values = fresh();
+    S.step = 0; S.seeded = false; S.docs = [];
+    renderLogin();
+  }
+
+  function startOver() {
+    if (S.docs.length && !confirm("Start a new deal? The drafts on this page will be cleared.")) return;
+    S.values = fresh(); S.step = 0; S.seeded = false; S.review = null; S.qs = null; S.docs = []; S.cur = 0; S.editing = false;
+    screenDeal();
+  }
+
+  function startApp() { shell(); screenDeal(); }
+
+  /* ---------------------------------------------------------------- 1. deal details */
+
+  function screenDeal() {
+    const values = S.values;
+    const stepsEl = h("div", { class: "steps" });
+    const body = h("div");
+    const err = h("div", { class: "error", role: "alert", hidden: true });
+    const nav = h("div", { class: "row", style: { marginTop: "22px" } });
+
+    function applyWhen() {
+      body.querySelectorAll("label[data-k]").forEach((l) => {
+        const f = WIZ[S.step].fields.find((x) => x.k === l.dataset.k);
+        if (f && f.when) { const dep = body.querySelector(`[name="${f.when[0]}"]`); l.hidden = !dep || dep.value !== f.when[1]; }
+      });
+    }
+    function draw() {
+      stepsEl.replaceChildren(...WIZ.map((s, n) => h("div", { class: "step" + (n < S.step ? " done" : n === S.step ? " now" : "") }, h("i", null, n < S.step ? "\u2713" : String(n + 1)), s.name)));
+      body.replaceChildren(h("div", { class: "grid panel-in" }, WIZ[S.step].fields.map((f) => field(f, values[f.k]))));
+      body.querySelectorAll("select").forEach((s) => s.addEventListener("change", applyWhen));
+      applyWhen();
+      err.hidden = true;
+      nav.replaceChildren(
+        S.step > 0 ? h("button", { class: "btn line", type: "button", onclick: () => move(-1) }, "Back") : h("button", { class: "btn soft", type: "button", onclick: sample }, "Fill in a sample deal"),
+        h("span", { class: "spacer" }),
+        S.step < WIZ.length - 1 ? h("button", { class: "btn", type: "button", onclick: () => move(1) }, "Next") : h("button", { class: "btn gold", type: "button", onclick: review }, "Review this deal"));
+    }
+    function stash() { Object.assign(values, collect(body)); }
+    function sample() { Object.assign(values, SAMPLE); draw(); toast("Sample deal filled in. Press Next to look through it."); }
+    function move(dir) {
+      stash();
+      if (dir > 0) {
+        const miss = WIZ[S.step].fields.find((f) => f.req && !String(values[f.k] || "").trim());
+        if (miss) { err.textContent = "Fill in: " + miss.l + "."; err.hidden = false; body.querySelector(`[name="${miss.k}"]`).focus(); return; }
+      }
+      if (S.step === 0 && dir > 0 && !S.seeded) {                         // the deal starts from the dealership's own state and city
+        S.seeded = true;
+        const fill = { deal_state: values.state, buyer_state: values.state, reg_state: values.state, place: values.city, jurisdiction_city: values.city };
+        Object.keys(fill).forEach((k) => { if (!values[k] || values[k] === DEFAULTS[k]) values[k] = fill[k]; });
+      }
+      S.step += dir;
+      draw();
+      window.scrollTo(0, 0);
+    }
+    async function review(e) {
+      stash();
+      const miss = WIZ.flatMap((s) => s.fields).find((f) => f.req && !String(values[f.k] || "").trim());
+      if (miss) { err.textContent = "Fill in: " + miss.l + "."; err.hidden = false; return; }
+      await busy(e.currentTarget, "Reviewing your deal", async () => {
+        S.review = await api("/analyze", "POST", payload());
+        screenReview();
+      });
+    }
+    draw();
+    show(0, h("div", { class: "page-head" }, h("div", null, h("h1", null, "Record the deal"),
+      h("p", { class: "muted", style: { margin: "8px 0 0" } }, "Tell us about the sale. Nothing is saved when you close this page."))),
+      h("div", { class: "sheet" }, stepsEl, body, err, nav));
+  }
+
+  function payload(extra) {
+    const profile = {};
+    PROFILE_KEYS.forEach((k) => { profile[k] = S.values[k] || ""; });
+    return Object.assign({ profile, deal: S.values }, extra || {});
+  }
+
+  /* ---------------------------------------------------------------- 2. AI review */
+
+  function notes(title, items, kind) {
+    if (!items || !items.length) return null;
+    return h("div", { class: "sheet" }, h("h3", { style: { marginBottom: "6px" } }, title),
+      items.map((it) => h("div", { class: "note " + (it.level || kind || "") }, h("span", { class: "dot" }),
+        h("div", null, it.text || it.issue || it, it.action ? h("div", { class: "hint", style: { marginTop: "2px" } }, "What to do: " + it.action) : null))));
+  }
+
+  function screenReview() {
+    const res = S.review, r = res.review;
+    const look = { low: ["", "pulse"], medium: ["draft", "pencil"], high: ["changes", "flag"] }[r.risk_level] || ["", "pulse"];
+    show(1,
+      h("div", { class: "page-head" }, h("h1", null, "How the deal looks")),
+      h("div", { class: "status " + look[0] }, h("span", { class: look[1] }), h("div", null, h("h3", null, cap(r.risk_level) + " risk"), h("p", null, r.verdict))),
+      res.ai ? h("p", { class: "muted small" }, "Written by AI from the facts you entered, plus rule-based checks for Tamil Nadu and Kerala. Confirm legal points with your advocate.")
+        : h("div", { class: "sheet tight petal" }, res.ai_note),
+      h("div", { class: "grid metrics" }, r.metrics.map((m) => h("div", { class: "sheet tight mint" }, h("div", { class: "muted small" }, m.label), h("div", { class: "vtitle" }, m.value)))),
+      notes("What looks good", r.strengths, ""),
+      notes("Risks, and what to do", r.risks, "warn"),
+      notes("Legal and compliance checks", r.compliance, ""),
+      notes("Next steps", r.next_steps, ""),
+      h("div", { class: "row", style: { marginTop: "22px" } },
+        h("button", { class: "btn line", type: "button", onclick: screenDeal }, "Back to the deal"), h("span", { class: "spacer" }),
+        h("button", { class: "btn gold", type: "button", onclick: (e) => busy(e.currentTarget, "Preparing questions", async () => { S.qs = await api("/questions", "POST", payload()); screenQuestions(); }) }, "Generate legal documents")));
+  }
+
+  /* ---------------------------------------------------------------- 3. questions and notices */
+
+  function screenQuestions() {
+    const qs = S.qs;
+    const qSpecs = qs.questions.map((q) => ({ k: q.field, l: q.label, t: q.type, o: (q.options || []).map((o) => [o.value, o.label]), hint: q.why + (q.ai ? " (AI suggested)" : ""), span: q.type === "textarea" ? 1 : 0, rows: 2 }));
+    const qRoot = h("div", { class: "grid" }, qSpecs.map((f) => field(f)));
+    const suggested = Object.fromEntries(qs.suggested.map((s) => [s.key, s.reason]));
+    const nRoot = h("div");
+    const deliveredBox = h("input", { type: "checkbox", id: "delivered", style: { width: "auto" } });
+    const deliveredRow = h("label", { class: "sheet tight mint", hidden: true, for: "delivered", style: { display: "flex", gap: "10px", alignItems: "center", marginTop: "12px", cursor: "pointer" } },
+      deliveredBox, h("span", null, "The car has already been delivered to the buyer ", h("span", { class: "hint" }, "(the payment notice words its demand differently if it is still with you)")));
+    const boxes = [];
+
+    qs.notices.forEach((n) => {
+      const cb = h("input", { type: "checkbox", id: "n_" + n.key, style: { width: "auto", marginTop: "5px" } });
+      const specs = n.fields.map((f) => ({ k: n.key + "." + f.key, l: f.label, t: f.type === "textarea" ? "textarea" : f.type, hint: f.hint, span: f.type === "textarea" ? 1 : 0, rows: 2, d: f.default }));
+      const fieldsRoot = h("div", { class: "grid", hidden: true, style: { marginTop: "14px" } },
+        specs.map((f, i) => { const raw = n.fields[i].key; const pre = qs.prefill[raw]; return field(f, pre !== undefined && pre !== "" ? String(pre) : undefined); }));
+      const card = h("div", { class: "sheet tight", style: { marginTop: "10px" } },
+        h("label", { for: "n_" + n.key, style: { display: "flex", gap: "12px", alignItems: "flex-start", cursor: "pointer" } }, cb,
+          h("div", null, h("div", { class: "vtitle" }, n.label), h("div", { class: "muted small" }, n.blurb),
+            suggested[n.key] ? h("div", { style: { marginTop: "6px" } }, h("span", { class: "chip gold" }, "Worth checking: " + suggested[n.key])) : null)),
+        fieldsRoot);
+      cb.addEventListener("change", () => { fieldsRoot.hidden = !cb.checked; deliveredRow.hidden = !boxes.some((b) => b.checked); });
+      boxes.push(cb);
+      cb._root = fieldsRoot; cb._key = n.key;
+      nRoot.append(card);
+    });
+
+    async function generate(e) {
+      const answers = {};
+      Object.entries(collect(qRoot)).forEach(([k, v]) => { if (String(v).trim()) answers[k] = v; });
+      const notices = boxes.filter((b) => b.checked).map((b) => {
+        const facts = {}, raw = collect(b._root);
+        Object.keys(raw).forEach((k) => { facts[k.slice(b._key.length + 1)] = raw[k]; });
+        return { type: b._key, facts };
+      });
+      await busy(e.currentTarget, "Drafting your documents", async () => {
+        const r = await api("/generate", "POST", payload({ answers, notices, delivered: deliveredBox.checked }));
+        S.docs = r.documents; S.ref = r.ref; S.cur = 0; S.editing = false;
+        screenDocs();
+      });
+    }
+
+    show(2,
+      h("div", { class: "page-head" }, h("h1", null, "A few questions first")),
+      h("div", { class: "sheet" }, h("h3", { style: { marginBottom: "4px" } }, "Clarifying questions"),
+        h("p", { class: "muted small" }, qs.questions.length ? "Your answers go straight into the agreement. Leave one blank to skip it." : "Nothing important is missing from the deal."),
+        qs.questions.length ? qRoot : null),
+      h("div", { class: "sheet" }, h("h3", { style: { marginBottom: "4px" } }, "Documents"),
+        h("div", { class: "sheet tight mint" }, h("div", { class: "vtitle" }, "Sale agreement with delivery receipt"), h("span", { class: "chip sea" }, "Always included"),
+          h("div", { class: "muted small", style: { marginTop: "4px" } }, "Written for the state you chose, with RC transfer, tax, challan, finance and warranty clauses.")),
+        h("p", { class: "muted small", style: { margin: "16px 0 0" } }, "Add a legal notice only if something has already gone wrong with this sale:"),
+        nRoot, deliveredRow),
+      h("div", { class: "row", style: { marginTop: "22px" } },
+        h("button", { class: "btn line", type: "button", onclick: screenReview }, "Back to the review"), h("span", { class: "spacer" }),
+        h("button", { class: "btn gold", type: "button", onclick: generate }, "Draft the documents")));
+  }
+
+  /* ---------------------------------------------------------------- 4. documents and download */
+
+  function screenDocs() {
+    const view = h("div"), tabs = h("div", { class: "tabs", role: "tablist" });
+    const editBtn = h("button", { class: "btn soft", type: "button", onclick: () => { sync(); S.editing = !S.editing; draw(); } });
+    function sync() { const ta = view.querySelector("textarea"); if (S.editing && ta) S.docs[S.cur].body = ta.value; }
+    function draw() {
+      tabs.replaceChildren(...S.docs.map((d, i) => h("button", { type: "button", role: "tab", "aria-selected": String(i === S.cur), onclick: () => { sync(); S.cur = i; draw(); } }, d.title)));
+      if (S.editing) { const ta = h("textarea", { class: "editor" }); ta.value = S.docs[S.cur].body; view.replaceChildren(ta); }
+      else view.replaceChildren(renderDoc(S.docs[S.cur].body));
+      editBtn.textContent = S.editing ? "Done editing" : "Edit the wording";
+    }
+    async function download(e) {
+      sync();
+      await busy(e.currentTarget, "Building your Word file", async () => {
+        let res;
+        try {
+          res = await fetch("/api/download", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-Requested-With": "DealPick" }, body: JSON.stringify({ documents: S.docs, ref: S.ref }) });
+        } catch (x) { throw new Error("Can't reach the server. Check your connection and try again."); }
+        if (!res.ok) { let m = "Could not build the file."; try { m = (await res.json()).message || m; } catch (x) { /* not JSON */ } throw new Error(m); }
+        const url = URL.createObjectURL(await res.blob());
+        const a = h("a", { href: url, download: "Legal-Documents_" + S.ref + ".docx" });
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        toast("Your Word file is downloading.");
+      });
+    }
+    draw();
+    show(3,
+      h("div", { class: "page-head" }, h("div", null, h("h1", null, "Your documents are ready"),
+        h("p", { class: "muted", style: { margin: "8px 0 0" } }, "Read them here, tidy any wording, then download everything as one Word file."))),
+      h("div", { class: "sheet" }, tabs, view),
+      h("div", { class: "row", style: { marginTop: "18px" } },
+        h("button", { class: "btn line", type: "button", onclick: () => { sync(); screenQuestions(); } }, "Back to the questions"), h("span", { class: "spacer" }), editBtn,
+        h("button", { class: "btn gold", type: "button", onclick: download }, "Download Word file")),
+      h("div", { class: "sheet tight petal", style: { marginTop: "18px" } }, h("b", null, "Before you use these. "),
+        "They are drafting aids, not legal advice. Have an advocate review the agreement and every notice before you sign or send it. Nothing is stored, so these drafts disappear when you leave this page."));
+  }
+
+  /* ---------------------------------------------------------------- start */
+
+  (async function init() {
+    try { const me = await api("/me"); S.authed = !!me.authed; } catch (e) { S.authed = false; }
+    if (S.authed) startApp(); else renderLogin();
+  })();
+})();
+
+</script>
+</body>
+</html>
