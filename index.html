@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="DealPick">
 <meta name="theme-color" content="#0E4D57">
 <title>MFA DealPick</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M6 34V20C6 11 12 5 20 5s14 6 14 15v14' fill='none' stroke='%230E4D57' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M20 28c-5-3.4-7.5-6-7.5-9a4.2 4.2 0 0 1 7.5-2.2A4.2 4.2 0 0 1 27.5 19c0 3-2.5 5.6-7.5 9z' fill='%23F4B63F'/%3E%3C/svg%3E">
@@ -253,6 +257,95 @@ dl.facts dd { margin: 0; font-weight: 600; word-break: break-word; }
 .tabs button { flex: 1 1 auto; }
 .stack { display: grid; gap: 14px; }
 .enter { animation: rise .5s var(--ease) both; }
+
+/* ---------- phones and tablets ---------- */
+html { -webkit-tap-highlight-color: transparent; }
+body { min-height: 100vh; min-height: 100dvh; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.auth { min-height: 100vh; min-height: 100dvh; }
+.top { padding-top: max(14px, env(safe-area-inset-top)); }
+main { padding-bottom: max(90px, calc(40px + env(safe-area-inset-bottom))); }
+#toasts { bottom: max(18px, env(safe-area-inset-bottom)); }
+.paper, .editor { -webkit-overflow-scrolling: touch; }
+.paper table { display: block; overflow-x: auto; max-width: 100%; }
+.sheet, .modal, .paper, dl.facts dd, .note, .deal, .list-row { overflow-wrap: anywhere; }
+.paper p { overflow-wrap: break-word; }
+img, svg { max-width: 100%; }
+
+/* touch devices: comfortable tap targets, no sticky hover */
+@media (pointer: coarse) {
+  .btn { min-height: 46px; }
+  .btn.small { min-height: 40px; }
+  .who button { min-height: 40px; padding: 8px 6px; }
+  .tabs button { min-height: 42px; }
+  nav.main a { padding: 11px 16px; }
+  input, select { min-height: 46px; }
+  .pick { padding: 16px; }
+}
+@media (hover: none) {
+  .btn:hover, .pick:hover { transform: none; box-shadow: none; }
+}
+
+/* tablets (portrait and small landscape) */
+@media (min-width: 601px) and (max-width: 1024px) {
+  main { max-width: 100%; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid.metrics { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .span2 { grid-column: 1 / -1; }
+  .paper { max-height: none; }
+}
+
+/* phones */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .aura i { filter: blur(48px); }
+  .logo { font-size: 19px; }
+  .logo svg { width: 32px; height: 32px; }
+  .top { gap: 8px; padding-bottom: 8px; }
+  .top .spacer { display: none; }
+  .who { width: 100%; justify-content: space-between; gap: 8px; }
+  .auth { align-content: start; gap: 20px; padding: 20px 16px 32px; }
+  .auth .lead { font-size: 16px; margin-top: 10px; }
+  .hero-art { display: none; }
+  .auth-card { border-radius: 22px; }
+  .sheet { border-radius: 18px; padding: 16px; }
+  .sheet.tight { padding: 14px 16px; }
+  .page-head { margin: 10px 0 16px; }
+  .grid, .grid.metrics { grid-template-columns: 1fr; gap: 12px; }
+  .row { gap: 8px; }
+  .row > .btn { flex: 1 1 140px; }
+  .row.end { justify-content: stretch; }
+  .tabs button { font-size: 13px; padding: 9px 4px; }
+  /* wizard: show numbers; only the current step keeps its name */
+  .step { font-size: 0; gap: 0; }
+  .step.now { font-size: 12px; gap: 4px; }
+  .step i { font-size: 14px; }
+  .road-labels { font-size: 11px; }
+  .road-labels span { overflow-wrap: anywhere; padding: 0 1px; }
+  .status { padding: 14px 16px; gap: 12px; }
+  .approved-box { padding: 16px; gap: 14px; }
+  .seal { width: 110px; height: 110px; }
+  .paper { padding: 16px 14px; font-size: 15px; max-height: none; }
+  .paper p { text-align: left; }
+  .paper .t1 { font-size: 18px; }
+  .paper .t2 { font-size: 16px; }
+  .editor { min-height: 360px; padding: 14px; font-size: 16px; }
+  dl.facts { grid-template-columns: 1fr; gap: 0; }
+  dl.facts dd { margin-bottom: 8px; }
+  .list-row .grow { min-width: 0; flex-basis: 100%; }
+  /* dialogs become bottom sheets */
+  .modal-back { align-items: end; padding: 0; }
+  .modal, .modal.wide { border-radius: 22px 22px 0 0; max-height: 92vh; max-height: 92dvh; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+  .pick:hover { transform: none; }
+}
+@media (max-width: 360px) {
+  main, .top { padding-left: 12px; padding-right: 12px; }
+  h1 { font-size: 28px; }
+  .btn { padding: 10px 14px; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .auth { min-height: 0; align-content: start; }
+  .modal { max-height: 96vh; }
+}
 </style>
 </head>
 <body>
@@ -534,22 +627,21 @@ dl.facts dd { margin: 0; font-weight: 600; word-break: break-word; }
       const btn = form.querySelector("button[type=submit]");
       btn.disabled = true;
       try {
-        await api("/login", "POST", collect(form));
+        await api("/demo-login", "POST", {});
         S.authed = true;
         startApp();
       } catch (ex) { err.textContent = ex.message; err.hidden = false; btn.disabled = false; }
     }
     const form = h("form", { onsubmit: submit, novalidate: true },
-      h("div", { class: "stack" }, field({ k: "username", l: "Username", ac: "username" }), field({ k: "password", l: "Password", t: "password", ac: "current-password" })),
-      err, h("div", { class: "row", style: { marginTop: "18px" } }, h("button", { class: "btn gold", type: "submit" }, "Log in")));
+      err, h("div", { class: "row" }, h("button", { class: "btn gold", type: "submit" }, "Enter demo")));
     app.replaceChildren(h("div", { class: "auth" },
       h("div", null,
         h("span", { class: "logo", style: { marginBottom: "26px" } }, logo(), "MFA DealPick"),
         h("h1", null, "Every deal, looked after."),
-        h("p", { class: "lead" }, "Record a used-car sale, get an honest review of the deal, and download an agreement and legal notices written for Tamil Nadu or Kerala."),
+        h("p", { class: "lead" }, "Record a used-car sale, get an honest review of the deal, and download an agreement and legal notices."),
         heroArt()),
-      h("div", { class: "sheet auth-card" }, h("h2", { style: { marginBottom: "16px" } }, "Dealer log in"), form,
-        h("p", { class: "muted small", style: { marginTop: "16px", marginBottom: 0 } }, "A prototype: nothing you enter is saved on the server."))));
+      h("div", { class: "sheet auth-card" }, h("h2", { style: { marginBottom: "16px" } }, "Try the demo"), form,
+        h("p", { class: "muted small", style: { marginTop: "16px", marginBottom: 0 } }, "One click, no password. A prototype: nothing you enter is saved on the server."))));
   }
 
   /* ---------------------------------------------------------------- shell and progress */
