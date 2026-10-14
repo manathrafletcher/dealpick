@@ -305,7 +305,7 @@ img, svg { max-width: 100%; }
   .who { width: 100%; justify-content: space-between; gap: 8px; }
   .auth { align-content: start; gap: 20px; padding: 20px 16px 32px; }
   .auth .lead { font-size: 16px; margin-top: 10px; }
-  .hero-art { display: none; }
+  .hero-art { width: min(100%, 360px); margin: 18px auto 0; }
   .auth-card { border-radius: 22px; }
   .sheet { border-radius: 18px; padding: 16px; }
   .sheet.tight { padding: 14px 16px; }
@@ -315,10 +315,10 @@ img, svg { max-width: 100%; }
   .row > .btn { flex: 1 1 140px; }
   .row.end { justify-content: stretch; }
   .tabs button { font-size: 13px; padding: 9px 4px; }
-  /* wizard: show numbers; only the current step keeps its name */
-  .step { font-size: 0; gap: 0; }
-  .step.now { font-size: 12px; gap: 4px; }
-  .step i { font-size: 14px; }
+  /* wizard: keep every step name, in a smaller size */
+  .step { font-size: 11px; gap: 4px; text-align: center; line-height: 1.2; padding: 0 2px; }
+  .step i { font-size: 14px; width: 30px; height: 30px; }
+  .step::before, .step::after { top: 14px; }
   .road-labels { font-size: 11px; }
   .road-labels span { overflow-wrap: anywhere; padding: 0 1px; }
   .status { padding: 14px 16px; gap: 12px; }
