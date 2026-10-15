@@ -115,7 +115,7 @@ textarea { resize: vertical; min-height: 84px; }
 @keyframes pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: none; } }
 @keyframes glow { 50% { opacity: .45; } }
 .pulli circle { transform-box: fill-box; transform-origin: center; }
-.heart-top { fill: var(--gold); opacity: 0; transform-box: fill-box; transform-origin: center; animation: pop .7s var(--ease) 3.2s forwards, beat 2.8s ease-in-out 4s infinite; }
+.star-top { fill: var(--gold); opacity: 0; transform-box: fill-box; transform-origin: center; animation: pop .7s var(--ease) 3.2s forwards, beat 2.8s ease-in-out 4s infinite; }
 .auth-card { border-radius: 28px 28px 28px 8px; }
 .tabs { display: flex; gap: 4px; background: var(--mint2); padding: 4px; border-radius: 14px; margin-bottom: 20px; }
 .tabs button { flex: 1; border: 0; background: none; padding: 9px 8px; border-radius: 10px; font: 600 14px var(--body); color: var(--lagoon); cursor: pointer; transition: background .25s, box-shadow .25s; }
@@ -246,7 +246,7 @@ dl.facts dd { margin: 0; font-weight: 600; word-break: break-word; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; transition-delay: 0s !important; }
   .draw { stroke-dashoffset: 0; }
-  .pulli circle, .heart-top { opacity: 1; }
+  .pulli circle, .star-top { opacity: 1; }
 }
 
 /* ---------- additions for the one-time flow ---------- */
@@ -407,7 +407,7 @@ img, svg { max-width: 100%; }
 
   /* ---------------------------------------------------------------- artwork (fixed markup only) */
 
-  const logo = () => svgFrom(`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 34V20C6 11 12 5 20 5s14 6 14 15v14" fill="none" stroke="#0E4D57" stroke-width="3.2" stroke-linecap="round"/><path class="beat" d="M20 28c-5-3.4-7.5-6-7.5-9a4.2 4.2 0 0 1 7.5-2.2A4.2 4.2 0 0 1 27.5 19c0 3-2.5 5.6-7.5 9z" fill="#F4B63F"/></svg>`);
+  const logo = () => svgFrom(`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 34V20C6 11 12 5 20 5s14 6 14 15v14" fill="none" stroke="#0E4D57" stroke-width="3.2" stroke-linecap="round"/><path class="beat" d="M20.0 13.0L22.2 18.4L28.1 18.9L23.6 22.7L25.0 28.4L20.0 25.3L15.0 28.4L16.4 22.7L11.9 18.9L17.8 18.4z" fill="#F4B63F" stroke="#F4B63F" stroke-width="1" stroke-linejoin="round"/></svg>`);
 
   const carIcon = () => svgFrom(`<svg class="car" viewBox="0 0 64 30" aria-hidden="true"><path d="M3 24V17q0-4 5-5l11-2 8-7q2-2 5-2h15q3 0 5 3l7 6 6 2q3 1 3 5v7z" fill="#0E4D57"/><path d="M24 9l-5 6h12V9zm11 0v6h16l-5-6z" fill="#D6EFE6"/><circle cx="17" cy="24" r="5" fill="#0B2E35"/><circle cx="17" cy="24" r="2" fill="#F4B63F"/><circle cx="49" cy="24" r="5" fill="#0B2E35"/><circle cx="49" cy="24" r="2" fill="#F4B63F"/></svg>`);
 
@@ -415,7 +415,7 @@ img, svg { max-width: 100%; }
     const dots = [40, 75, 110, 145, 180, 215, 250, 285, 320].map((x, i) => `<circle cx="${x}" cy="219" r="4.5" style="animation-delay:${3.4 + i * 0.12}s,${5 + i * 0.3}s"/>`).join("");
     return svgFrom(`<svg class="hero-art" viewBox="0 0 360 232" role="img" aria-label="A car sheltered under a protective arch">
       <path class="draw arch" pathLength="1" d="M22 200C22 52 100 14 180 14s158 38 158 186"/>
-      <path class="heart-top" d="M180 40c-9-6-14-11-14-17a7.6 7.6 0 0 1 14-4 7.6 7.6 0 0 1 14 4c0 6-5 11-14 17z"/>
+      <path class="star-top" d="M180.0 18.0L183.2 25.6L191.4 26.3L185.1 31.7L187.1 39.7L180.0 35.4L172.9 39.7L174.9 31.7L168.6 26.3L176.8 25.6z" stroke="#F4B63F" stroke-width="1.5" stroke-linejoin="round"/>
       <path class="draw" pathLength="1" d="M30 199H330"/>
       <g class="car-bob"><g transform="translate(40 80)">
         <path class="draw" pathLength="1" d="M8 100V82Q8 70 22 68L66 60L96 30Q101 25 109 25H188Q197 25 203 31L232 60L262 66Q274 69 274 82V100Z"/>
