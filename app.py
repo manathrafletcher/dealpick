@@ -1,7 +1,7 @@
 """
 MFA DealPick - one-time-use prototype (single file)
 ---------------------------------------------------
-A used-car dealership logs in, enters a deal (Tamil Nadu or Kerala), gets an AI review of the deal,
+A used-car dealership logs in, enters a deal (Tamil Nadu or Kerala), gets an AI review and an honest legal review of the deal,
 answers a few clarifying questions, and downloads the legal drafts for that deal in ONE Word file.
 
 Nothing is stored: no database, no files. Each request carries everything it needs, and the
@@ -1216,11 +1216,17 @@ RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
 
 INSIGHT_SYSTEM = (
     "You advise a used-car dealership in Tamil Nadu or Kerala, India, in plain English. You are given the facts of one sale "
-    "and the rule-based checks already run. Give the dealer a practical review of the deal. Use only the facts given. Never invent "
-    "facts, figures, section numbers or case law. You are not a lawyer: where the law is involved, say an advocate should confirm. "
+    "and the rule-based checks already run. Give the dealer a practical review of the deal, including a candid legal review. "
+    "Use only the facts given. Never invent facts, figures, section numbers or case law. You are not a lawyer: where the law is involved, "
+    "say an advocate should confirm. Be candid in the legal review: say where the dealer's position is weak or a term may not hold up, "
+    "even if the dealer will not like it. Do not flatter the dealer. Name a law only from this list: Indian Contract Act 1872, Sale of Goods Act 1930, "
+    "Motor Vehicles Act 1988, Negotiable Instruments Act 1881, Consumer Protection Act 2019, Arbitration and Conciliation Act 1996, "
+    "CGST Act 2017, income-tax law, and the state motor vehicle tax and stamp acts. Give a section number only if you are certain of it; otherwise name the Act alone. "
     'Reply with JSON only, no markdown, in exactly this shape: {"verdict": "two sentences on how sound the deal looks", '
-    '"risk_level": "low or medium or high", "strengths": ["..."], "risks": [{"issue": "...", "action": "..."}], "next_steps": ["..."]}. '
-    "At most 5 strengths, 6 risks and 6 next steps. Keep each item under 40 words."
+    '"risk_level": "low or medium or high", "strengths": ["..."], "risks": [{"issue": "...", "action": "..."}], "next_steps": ["..."], '
+    '"legal_review": {"standing": "strong or mixed or weak", "summary": "two plain, honest sentences on how this deal would stand up in a dispute", '
+    '"points": [{"issue": "...", "law": "...", "action": "..."}]}}. '
+    "At most 5 strengths, 6 risks, 6 next steps and 4 legal points. Do not repeat a legal point already listed. Keep each item under 45 words."
 )
 
 
@@ -1262,14 +1268,154 @@ def rule_based_review(p, d, comp):
             "strengths": [], "risks": risks[:6], "next_steps": steps}
 
 
-def ai_review(p, d, comp):
+# --- honest legal review -----------------------------------------------------------------------
+# Rule-based, so it always runs. It reads the deal as a buyer's advocate would: where the dealer is covered, where not.
+
+LEGAL_ORDER = {"strong": 0, "mixed": 1, "weak": 2}
+_LEVEL_ORDER = {"alert": 0, "warn": 1, "info": 2}
+LEGAL_HEADLINES = {"strong": "Legally sound", "mixed": "Sound, with gaps", "weak": "Legally exposed"}
+LEGAL_VERDICTS = {
+    "strong": "On the facts you entered, nothing here is likely to defeat the deal. The points below are still where a dispute would be fought, so close them off.",
+    "mixed": "The agreement is enforceable in principle, but it has gaps a buyer's advocate would use. Fix the red and amber points before you sign.",
+    "weak": "As the deal stands, parts of it would be hard to defend in a dispute. Fix the red points before you sign or hand over the car.",
+}
+LEGAL_CAVEAT = ("This is a plain-English reading of the deal by software, based only on what you entered. It is not an advocate's opinion, "
+                "and a court decides what is enforceable. Have your advocate confirm the points that matter before you rely on them.")
+
+
+def legal_points(p, d, today=None):
+    """Candid legal findings for one deal: [{level, issue, law, action}] with level alert | warn | info."""
+    today = today or today_ist()
+    st = deal_state(p, d)
+    S = STATES[st]
+    price, adv, bal = num(d.get("price")), num(d.get("advance")), balance_due(d)
+    pct, rate = num(d.get("forfeit_pct"), 10), num(d.get("interest_rate"), 12)
+    out = []
+
+    def add(level, issue, law, action):
+        out.append({"level": level, "issue": issue, "law": law, "action": action})
+
+    # whose car is it, and is it free to sell
+    if _s(d, "hypothecated") == "yes":
+        fin = _s(d, "financier") or "the lender"
+        add("alert", f"The car is under a loan with {fin}. Selling it before the loan is closed, without the lender's written consent, breaks your loan contract. "
+                     "The lender keeps its charge on the car whoever holds it, so the buyer can end up with a car the lender can chase.",
+            "Motor Vehicles Act, 1988 (hypothecation entry); Indian Contract Act, 1872",
+            "Close the loan and get Form 35 and the lender's NOC before delivery, or pay the lender directly out of the balance.")
+    holder = _s(d, "rc_holder")
+    if holder and holder.lower() != p["dealership_name"].strip().lower():
+        add("warn", f"The RC is in the name of {holder}, not your dealership. You can pass on only the title that person gave you. "
+                    "If they did not authorise the sale, the buyer gets no good title and you are the one who has to answer for it.",
+            "Sale of Goods Act, 1930, Section 27",
+            "Hold Form 29 signed by the registered owner and their written authority to sell. Check their signature against the RC and their ID.")
+    age = int(num(d.get("buyer_age"))) if num(d.get("buyer_age")) else 0
+    if 0 < age < 18:
+        add("alert", "The buyer is under 18. A contract with a minor is void from the start, so you could not enforce the price, the interest or the forfeiture.",
+            "Indian Contract Act, 1872, Section 11", "Make the parent or guardian the buyer, and have them sign.")
+
+    # money
+    cash_hit = ((_s(d, "advance_mode") == "Cash" and adv >= 200000) or (_s(d, "balance_mode") == "Cash" and bal >= 200000))
+    if cash_hit:
+        add("alert", "You plan to take Rs. 2,00,000 or more in cash. Income-tax law bars this, and the penalty can equal the amount received. "
+                     "It also leaves you with weak proof of payment.",
+            "Income-tax law (cash receipts of Rs. 2,00,000 or more)", "Take a bank transfer, cheque or demand draft instead. Confirm the rule with your accountant.")
+    dlv, due = parse_date(d.get("delivery_date")), parse_date(d.get("balance_due_date"))
+    if dlv and due and bal > 0 and dlv < due:
+        add("warn", f"You deliver the car on {dmy(d.get('delivery_date'))} but the balance is not due until {dmy(d.get('balance_due_date'))}. "
+                    "Clause 3 of the agreement says delivery is against full payment, so the dates you entered contradict it. Once the car and Forms 29 and 30 are with the buyer, "
+                    "your remedy for unpaid money is a suit for the price, which is slow.",
+            "Sale of Goods Act, 1930, Section 55", "Deliver only against the full balance, or move the due date to the delivery date.")
+    if "Cheque" in (_s(d, "advance_mode"), _s(d, "balance_mode")):
+        add("info", "A cheque is only a promise. If it bounces, you must send the legal notice within 30 days of the bank telling you, and the cheque must be presented within its validity. "
+                    "Miss either and the criminal remedy is lost.",
+            "Negotiable Instruments Act, 1881, Section 138", "Do not hand over the RC, Form 29 or Form 30 until the cheque has cleared.")
+    if adv <= 0 and price:
+        add("warn", "No advance has been taken, so the forfeiture clause has nothing to bite on. If the buyer walks away you can only sue for your actual loss, which takes time and proof.",
+            "Indian Contract Act, 1872, Section 74", "Take a token advance and record it in the agreement.")
+    elif adv > 0:
+        if pct > 20:
+            add("warn", f"You set forfeiture at {pct:g}% of the price. A court will not enforce a figure it finds excessive and may cut it to what it thinks is reasonable.",
+                "Indian Contract Act, 1872, Section 74", "Keep the figure to a genuine estimate of your loss, usually 10% or less for a used car.")
+        else:
+            add("info", "Forfeiture is not automatic. Even a sum agreed in advance is recoverable only as reasonable compensation, and a court can award less. "
+                        "Expect to show that you held the car back or lost a sale.",
+                "Indian Contract Act, 1872, Section 74", "Keep records of the days you held the car and any offers you turned down.")
+    if rate > 18:
+        add("warn", f"Interest of {rate:g}% a year on a late balance is high for a one-off sale and invites a challenge as a penalty. A court may reduce it.",
+            "Indian Contract Act, 1872, Section 74", "Bring it down to a rate you could defend as fair.")
+
+    # what the buyer is told about the car
+    defects, acc = _s(d, "known_defects"), _s(d, "accident_history")
+    if acc == "major" and not defects:
+        add("alert", "A major accident repair is on record but no defect is written down. If the buyer later learns of it, they can say it was hidden, cancel the sale and claim damages. "
+                     "The 'as is' clause will not save you.",
+            "Indian Contract Act, 1872, Sections 17 and 19; Consumer Protection Act, 2019",
+            "Describe the repair under known defects, and have the buyer initial that line.")
+    elif not defects:
+        add("warn", "No defects are listed. The agreement says the buyer takes the car 'as is', but that does not protect you if you knew of a fault, an accident or a changed odometer and said nothing. "
+                    "Hiding a known fault can let the buyer cancel the sale and claim damages.",
+            "Indian Contract Act, 1872, Sections 17 and 19; Consumer Protection Act, 2019",
+            "Write down every fault you know of and have the buyer initial the list.")
+    else:
+        add("info", "The 'as is' clause protects you for the faults you disclosed, not for any you knew of and left out. Keep the list complete and have the buyer initial it.",
+            "Indian Contract Act, 1872, Sections 17 and 19", "Re-read the list against the car's service and repair history before signing.")
+    wd, wk = int(num(d.get("warranty_days"))), int(num(d.get("warranty_km")))
+    if not (wd or wk):
+        add("info", "You give no warranty, but that does not remove every right. A dealer who sells by description must supply a car of merchantable quality, except for faults the buyer's inspection should have shown. "
+                    "A buyer can also complain to the Consumer Commission.",
+            "Sale of Goods Act, 1930, Section 16; Consumer Protection Act, 2019",
+            "Let the buyer inspect and test drive the car, and keep the signed record of it.")
+    if not _s(d, "odometer"):
+        add("warn", "No odometer reading is recorded. Odometer disputes are common in used-car sales, and without a recorded figure you cannot show what the buyer was told.",
+            "Indian Contract Act, 1872, Section 17", "Photograph the odometer at inspection and at delivery, and record the figure.")
+    if not (_s(d, "chassis") and _s(d, "engine_no")):
+        add("warn", "The chassis or engine number is missing. The agreement then does not fix which car was sold, and a dispute about the car's identity is hard to defend.",
+            "", "Copy both numbers from the RC and check them against the car itself.")
+
+    # paperwork that decides whether the agreement can be used
+    if not _s(d, "stamp_value"):
+        add("warn", "The stamp paper value is not set. An agreement that is not properly stamped generally cannot be used as evidence until the duty and any penalty are paid.",
+            S["stamp_act"][0].upper() + S["stamp_act"][1:], "Ask your advocate for the value, and type it into the deal.")
+    if not _s(d, "buyer_id_no"):
+        add("info", "No ID number is recorded for the buyer. If the buyer later denies signing, or a cheque bounces, you have little to tie the buyer to the deal.",
+            "", "Take a copy of the buyer's ID and address proof, and keep it with the agreement.")
+    add("warn", "The buyer's promise to pay challans after delivery binds only the buyer. Until the RC is changed, the transport department and the police still treat you as the owner, "
+                "so challans, tax demands and accident claims reach you first. The agreement lets you recover from the buyer. It does not stop them reaching you.",
+        "Motor Vehicles Act, 1988, Section 50", "Report the transfer within 14 days with Forms 29 and 30, and keep the proof of reporting.")
+    if str(d.get("arbitration")) in ("1", "true", "True", "yes"):
+        add("info", "Arbitration will not stop a buyer from taking a consumer complaint to the Consumer Commission, and it can cost more than a small claim is worth.",
+            "Consumer Protection Act, 2019; Arbitration and Conciliation Act, 1996", "Keep the clause only if you want a private forum for disputes you start.")
+    return out
+
+
+def legal_standing(points):
+    alerts = sum(1 for x in points if x["level"] == "alert")
+    warns = sum(1 for x in points if x["level"] == "warn")
+    if alerts >= 2 or (alerts >= 1 and warns >= 3):
+        return "weak"
+    if alerts == 1 or warns >= 3:
+        return "mixed"
+    return "strong"
+
+
+def rule_based_legal(p, d):
+    pts = legal_points(p, d)
+    standing = legal_standing(pts)
+    pts.sort(key=lambda x: _LEVEL_ORDER[x["level"]])
+    return {"standing": standing, "headline": LEGAL_HEADLINES[standing], "summary": LEGAL_VERDICTS[standing],
+            "points": pts[:12], "ai_summary": "", "caveat": LEGAL_CAVEAT}
+
+
+def ai_review(p, d, comp, legal_pts=None):
     """Returns (ai_fields or None, note)."""
     if not ai_available():
         return None, "The AI is switched off on this server (GROQ_API_KEY is not set), so you are seeing the rule-based review only."
     prompt = ("DEAL FACTS\n" + deal_summary(p, d) + "\n\nRULE-BASED CHECKS ALREADY RUN\n" +
-              "\n".join(f"- [{c['level']}] {c['text']}" for c in comp))
+              "\n".join(f"- [{c['level']}] {c['text']}" for c in comp) +
+              "\n\nLEGAL POINTS ALREADY LISTED (do not repeat these)\n" +
+              "\n".join(f"- [{x['level']}] {x['issue'][:140]}" for x in (legal_pts or [])))
     try:
-        data = _parse_json(ai_generate(prompt, system=INSIGHT_SYSTEM, temperature=0.2, max_tokens=1800))
+        data = _parse_json(ai_generate(prompt, system=INSIGHT_SYSTEM, temperature=0.2, max_tokens=2600))
         if not isinstance(data, dict):
             raise ValueError("unexpected shape")
     except Exception as e:                                   # the review still works without the AI
@@ -1279,9 +1425,16 @@ def ai_review(p, d, comp):
     for r in (data.get("risks") if isinstance(data.get("risks"), list) else [])[:6]:
         if isinstance(r, dict) and _clip(r.get("issue")):
             risks.append({"issue": _clip(r.get("issue")), "action": _clip(r.get("action"))})
+    lr = data.get("legal_review") if isinstance(data.get("legal_review"), dict) else {}
+    lpts = []
+    for r in (lr.get("points") if isinstance(lr.get("points"), list) else [])[:4]:
+        if isinstance(r, dict) and _clip(r.get("issue")):
+            lpts.append({"level": "warn", "issue": _clip(r.get("issue"), 400), "law": _clip(r.get("law"), 200),
+                         "action": _clip(r.get("action"), 300), "ai": True})
     return {"verdict": _clip(data.get("verdict"), 500), "risk_level": str(data.get("risk_level", "")).lower(),
             "strengths": _clip_list(data.get("strengths"), 5), "risks": risks,
-            "next_steps": _clip_list(data.get("next_steps"), 6)}, ""
+            "next_steps": _clip_list(data.get("next_steps"), 6),
+            "legal": {"standing": str(lr.get("standing", "")).lower(), "summary": _clip(lr.get("summary"), 500), "points": lpts}}, ""
 
 
 # --- clarifying questions ------------------------------------------------------------------
@@ -1576,8 +1729,15 @@ def analyze():
         return fail(" ".join(errs))
     comp = compliance(p, d)
     review = rule_based_review(p, d, comp)
-    ai, note = ai_review(p, d, comp)
+    legal = rule_based_legal(p, d)
+    ai, note = ai_review(p, d, comp, legal["points"])
     if ai:
+        al = ai["legal"]
+        if al["standing"] in LEGAL_ORDER and LEGAL_ORDER[al["standing"]] > LEGAL_ORDER[legal["standing"]]:
+            legal["standing"] = al["standing"]               # the AI can make the legal view harsher, never kinder
+            legal["headline"], legal["summary"] = LEGAL_HEADLINES[al["standing"]], LEGAL_VERDICTS[al["standing"]]
+        legal["ai_summary"] = al["summary"]
+        legal["points"] = legal["points"] + al["points"]
         if ai["verdict"]:
             review["verdict"] = ai["verdict"]
         if ai["risk_level"] in RISK_ORDER and RISK_ORDER[ai["risk_level"]] > RISK_ORDER[review["risk_level"]]:
@@ -1587,6 +1747,9 @@ def analyze():
             review["risks"] = ai["risks"]
         if ai["next_steps"]:
             review["next_steps"] = ai["next_steps"]
+    if legal["standing"] == "weak" and review["risk_level"] == "low":
+        review["risk_level"] = "medium"                         # a legally exposed deal is never "low risk"
+    review["legal"] = legal
     return ok(review=review, ai=bool(ai), ai_note=note)
 
 
