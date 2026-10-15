@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="DealPick">
 <meta name="theme-color" content="#0E4D57">
 <title>MFA DealPick</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M6 34V20C6 11 12 5 20 5s14 6 14 15v14' fill='none' stroke='%230E4D57' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M20 28c-5-3.4-7.5-6-7.5-9a4.2 4.2 0 0 1 7.5-2.2A4.2 4.2 0 0 1 27.5 19c0 3-2.5 5.6-7.5 9z' fill='%23F4B63F'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M6 34V20C6 11 12 5 20 5s14 6 14 15v14' fill='none' stroke='%230E4D57' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M20.0 13.0L22.2 18.4L28.1 18.9L23.6 22.7L25.0 28.4L20.0 25.3L15.0 28.4L16.4 22.7L11.9 18.9L17.8 18.4z' fill='%23F4B63F' stroke='%23F4B63F' stroke-width='1' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -360,7 +360,7 @@ img, svg { max-width: 100%; }
   "use strict";
 
   const app = document.getElementById("app");
-  const STAGES = ["Deal details", "AI review", "Questions", "Documents"];
+  const STAGES = ["Deal details", "Legal review", "Questions", "Documents"];
 
   function h(tag, attrs, ...kids) {
     const el = document.createElement(tag);
@@ -560,7 +560,7 @@ img, svg { max-width: 100%; }
 
 
   /* ================================================================ one-time-use flow ================================================================
-     login -> deal details (wizard) -> AI review -> questions + notice choice -> documents + one Word download.
+     login -> deal details (wizard) -> legal review -> questions + notice choice -> documents + one Word download.
      Nothing is saved: the deal lives in this page's memory and is gone when the tab closes. */
 
   const DEFAULTS = {
@@ -638,7 +638,7 @@ img, svg { max-width: 100%; }
       h("div", null,
         h("span", { class: "logo", style: { marginBottom: "26px" } }, logo(), "MFA DealPick"),
         h("h1", null, "Every deal, looked after."),
-        h("p", { class: "lead" }, "Record a used-car sale, get an honest review of the deal, and download an agreement and legal notices."),
+        h("p", { class: "lead" }, "Record a used-car sale, get an honest legal review of the deal, and download an agreement and legal notices."),
         heroArt()),
       h("div", { class: "sheet auth-card" }, h("h2", { style: { marginBottom: "16px" } }, "Try the demo"), form,
         h("p", { class: "muted small", style: { marginTop: "16px", marginBottom: 0 } }, "One click, no password. A prototype: nothing you enter is saved on the server."))));
@@ -646,7 +646,7 @@ img, svg { max-width: 100%; }
 
   /* ---------------------------------------------------------------- shell and progress */
 
-  const STAGE_NAMES = ["Deal details", "AI review", "Questions", "Documents"];
+  const STAGE_NAMES = ["Deal details", "Legal review", "Questions", "Documents"];
 
   function shell() {
     app.replaceChildren(
@@ -708,7 +708,7 @@ img, svg { max-width: 100%; }
       nav.replaceChildren(
         S.step > 0 ? h("button", { class: "btn line", type: "button", onclick: () => move(-1) }, "Back") : h("button", { class: "btn soft", type: "button", onclick: sample }, "Fill in a sample deal"),
         h("span", { class: "spacer" }),
-        S.step < WIZ.length - 1 ? h("button", { class: "btn", type: "button", onclick: () => move(1) }, "Next") : h("button", { class: "btn gold", type: "button", onclick: review }, "Review this deal"));
+        S.step < WIZ.length - 1 ? h("button", { class: "btn", type: "button", onclick: () => move(1) }, "Next") : h("button", { class: "btn gold", type: "button", onclick: review }, "Get the legal review"));
     }
     function stash() { Object.assign(values, collect(body)); }
     function sample() { Object.assign(values, SAMPLE); draw(); toast("Sample deal filled in. Press Next to look through it."); }
@@ -731,7 +731,7 @@ img, svg { max-width: 100%; }
       stash();
       const miss = WIZ.flatMap((s) => s.fields).find((f) => f.req && !String(values[f.k] || "").trim());
       if (miss) { err.textContent = "Fill in: " + miss.l + "."; err.hidden = false; return; }
-      await busy(e.currentTarget, "Reviewing your deal", async () => {
+      await busy(e.currentTarget, "Reviewing the deal", async () => {
         S.review = await api("/analyze", "POST", payload());
         screenReview();
       });
@@ -748,7 +748,7 @@ img, svg { max-width: 100%; }
     return Object.assign({ profile, deal: S.values }, extra || {});
   }
 
-  /* ---------------------------------------------------------------- 2. AI review */
+  /* ---------------------------------------------------------------- 2. legal review */
 
   function notes(title, items, kind) {
     if (!items || !items.length) return null;
@@ -757,18 +757,34 @@ img, svg { max-width: 100%; }
         h("div", null, it.text || it.issue || it, it.action ? h("div", { class: "hint", style: { marginTop: "2px" } }, "What to do: " + it.action) : null))));
   }
 
+  function legalCard(L) {
+    if (!L) return null;
+    const look = { strong: ["", "pulse"], mixed: ["draft", "pencil"], weak: ["changes", "flag"] }[L.standing] || ["", "pulse"];
+    return h("div", { class: "sheet" },
+      h("div", { class: "status " + look[0], style: { marginBottom: "10px" } }, h("span", { class: look[1] }),
+        h("div", null, h("h3", null, "Honest legal review: " + L.headline), h("p", null, L.summary))),
+      L.ai_summary ? h("p", { style: { margin: "0 0 6px" } }, h("b", null, "AI's reading. "), L.ai_summary) : null,
+      (L.points || []).map((pt) => h("div", { class: "note " + (pt.level || "") }, h("span", { class: "dot" }),
+        h("div", null, pt.issue,
+          pt.law ? h("div", { class: "hint", style: { marginTop: "2px" } }, "Basis: " + pt.law) : null,
+          pt.action ? h("div", { class: "hint", style: { marginTop: "2px" } }, "What to do: " + pt.action) : null,
+          pt.ai ? h("div", { class: "hint", style: { marginTop: "2px" } }, "Added by the AI. Confirm with your advocate.") : null))),
+      h("p", { class: "muted small", style: { margin: "10px 0 0" } }, L.caveat));
+  }
+
   function screenReview() {
     const res = S.review, r = res.review;
     const look = { low: ["", "pulse"], medium: ["draft", "pencil"], high: ["changes", "flag"] }[r.risk_level] || ["", "pulse"];
     show(1,
       h("div", { class: "page-head" }, h("h1", null, "How the deal looks")),
       h("div", { class: "status " + look[0] }, h("span", { class: look[1] }), h("div", null, h("h3", null, cap(r.risk_level) + " risk"), h("p", null, r.verdict))),
-      res.ai ? h("p", { class: "muted small" }, "Written by AI from the facts you entered, plus rule-based checks for Tamil Nadu and Kerala. Confirm legal points with your advocate.")
+      res.ai ? h("p", { class: "muted small" }, "Written by AI from the facts you entered, plus rule-based legal checks for Tamil Nadu and Kerala. Confirm legal points with your advocate.")
         : h("div", { class: "sheet tight petal" }, res.ai_note),
       h("div", { class: "grid metrics" }, r.metrics.map((m) => h("div", { class: "sheet tight mint" }, h("div", { class: "muted small" }, m.label), h("div", { class: "vtitle" }, m.value)))),
+      legalCard(r.legal),
       notes("What looks good", r.strengths, ""),
       notes("Risks, and what to do", r.risks, "warn"),
-      notes("Legal and compliance checks", r.compliance, ""),
+      notes("Paperwork and compliance checks", r.compliance, ""),
       notes("Next steps", r.next_steps, ""),
       h("div", { class: "row", style: { marginTop: "22px" } },
         h("button", { class: "btn line", type: "button", onclick: screenDeal }, "Back to the deal"), h("span", { class: "spacer" }),
